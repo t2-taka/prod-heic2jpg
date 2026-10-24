@@ -1,0 +1,91 @@
+{
+  "checkedOn": "2026-10-23",
+  "packages": [
+    {
+      "name": "libheif",
+      "version": "1.23.6",
+      "license": "LGPL-3.0-or-later",
+      "licenseUrl": "https://github.com/strukturag/libheif/blob/v1.23.6/COPYING",
+      "source": "https://github.com/strukturag/libheif/tree/f81f28ac014b1c28dee483ac45b72c6b05bc421a",
+      "files": {
+        "lib/libheif/libheif.js": "0b36ea5fbe59c755bd9baefd9560b00cc400ad951c7bfb1487a7e9d2a20fb4d9",
+        "lib/libheif/libheif.wasm": "968b11fc0eeed4b01303abc43b12743924cd3f983a179ea299075ac101dfecf2"
+      }
+    },
+    {
+      "name": "libde265",
+      "version": "1.1.3",
+      "license": "LGPL-3.0-or-later",
+      "licenseUrl": "https://github.com/strukturag/libde265/blob/v1.1.3/COPYING",
+      "source": "https://github.com/strukturag/libde265/tree/ba62bf4cfb3242f3bf0a45617ff09e35236e4d82",
+      "files": {}
+    },
+    {
+      "name": "FFmpeg",
+      "version": "5.1.10",
+      "license": "GPL-2.0-or-later",
+      "licenseUrl": "https://github.com/FFmpeg/FFmpeg/blob/n5.1.10/COPYING.GPLv2",
+      "source": "https://github.com/FFmpeg/FFmpeg/tree/19feb712f5c1821d8a3fa1ad63c5bd2e3b9672eb",
+      "files": {
+        "lib/ffmpeg/ffmpeg-core.js": "9bc0f58df398050544da174409285f9122aa35f7d2b5ff190c9c17047f8af1c4",
+        "lib/ffmpeg/ffmpeg-core.wasm": "6a5908e33c35ec921154244236e5b5a7ef07059567842be4404c5287c97a8b96"
+      }
+    },
+    {
+      "name": "x264",
+      "version": "0.164 (0480cb0)",
+      "license": "GPL-2.0-or-later",
+      "licenseUrl": "https://code.videolan.org/videolan/x264/-/blob/0480cb05fa188d37ae87e8f4fd8f1aea3711f7ee/COPYING",
+      "source": "https://code.videolan.org/videolan/x264/-/tree/0480cb05fa188d37ae87e8f4fd8f1aea3711f7ee",
+      "files": {}
+    },
+    {
+      "name": "LAME",
+      "version": "3.100",
+      "license": "LGPL-2.0-or-later",
+      "licenseUrl": "https://github.com/ffmpegwasm/lame/blob/2badea1974ae36cb8312afe99cff1e6b3b5decee/COPYING",
+      "source": "https://github.com/ffmpegwasm/lame/tree/2badea1974ae36cb8312afe99cff1e6b3b5decee",
+      "files": {}
+    },
+    {
+      "name": "@ffmpeg/ffmpeg",
+      "version": "0.12.15",
+      "license": "MIT",
+      "licenseUrl": "https://github.com/ffmpegwasm/ffmpeg.wasm/blob/main/LICENSE",
+      "source": "https://registry.npmjs.org/@ffmpeg/ffmpeg/0.12.15",
+      "files": {
+        "lib/ffmpeg/ffmpeg.min.js": "ad4cfe957589995dea03fc8de1fd5e9f5cb4558a7282913172203082a65bbfaa",
+        "lib/ffmpeg/814.ffmpeg.js": "976f4174ae7da80c0d4f9523ee6dde3ecbce7dc2ee392b2a5322049abb9b8627"
+      }
+    },
+    {
+      "name": "Bootstrap",
+      "version": "5.3.8",
+      "license": "MIT",
+      "licenseUrl": "https://github.com/twbs/bootstrap/blob/v5.3.8/LICENSE",
+      "source": "https://registry.npmjs.org/bootstrap/5.3.8",
+      "files": {
+        "lib/bootstrap/dist/js/bootstrap.bundle.min.js": "e4fd49181388c48ec5040bd3fe66f57c29c8e67fcd8502b3354b96ec7ab47cc7",
+        "lib/bootstrap/dist/css/bootstrap.min.css": "d85327d99c7a3ee1f9b5d0500d1370acea3ad2db39c163c2f51f232baedbdede"
+      }
+    },
+    {
+      "name": "JSZip",
+      "version": "3.10.2",
+      "license": "MIT OR GPL-3.0-or-later",
+      "licenseUrl": "https://github.com/Stuk/jszip/blob/v3.10.2/LICENSE.markdown",
+      "source": "https://registry.npmjs.org/jszip/3.10.2",
+      "files": {
+        "lib/jszip/jszip.min.js": "7f839b2d4688b845c105ebf5d2f9803075f91ea0fe72bdaac176c3a04dd3d2c1"
+      }
+    },
+    {
+      "name": "HeroIcons",
+      "version": "2.0.18",
+      "license": "MIT",
+      "licenseUrl": "https://github.com/tailwindlabs/heroicons/blob/v2.0.18/LICENSE",
+      "source": "https://github.com/tailwindlabs/heroicons/tree/v2.0.18",
+      "files": {}
+    }
+  ]
+}

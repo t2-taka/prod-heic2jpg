@@ -4,11 +4,11 @@ let conversionMutex = Promise.resolve(); // 変換処理の排他制御
 
 window.ffmpegConverter = {
     // 定数定義
-    FFMPEG_CORE_VERSION: '0.12.10',
+    FFMPEG_CORE_VERSION: '5.1.10',
     FFMPEG_VERSION: '0.12.15',
-    CDN_BASE_URL: 'https://cdn.jsdelivr.net/npm/@ffmpeg',
     FFMPEG_INIT_TIMEOUT: 120000, // 2分
-    PROGRESS_LOG_INTERVAL: 5000, // 5秒
+    // 入力側の安全対策（単一割り当て上限256MB、fileプロトコルのみ許可）
+    SAFE_INPUT_ARGS: ['-max_alloc', '268435456', '-protocol_whitelist', 'file'],
 
     isInitialized: false,
     ffmpeg: null,
@@ -22,9 +22,11 @@ window.ffmpegConverter = {
         }
         
         initializationPromise = this._doInitialize();
-        const result = await initializationPromise;
-        initializationPromise = null;
-        return result;
+        try {
+            return await initializationPromise;
+        } finally {
+            initializationPromise = null;
+        }
     },
 
     async _doInitialize() {
@@ -33,12 +35,6 @@ window.ffmpegConverter = {
 
         try {
             console.log('FFmpeg初期化開始...');
-
-            // FFmpegUtilライブラリの確認
-            if (typeof window.FFmpegUtil === 'undefined') {
-                console.error('FFmpegUtilライブラリが見つかりません');
-                return false;
-            }
 
             // FFmpegWASMライブラリの確認
             if (typeof window.FFmpegWASM === 'undefined') {
@@ -52,7 +48,6 @@ window.ffmpegConverter = {
             }
 
             const { FFmpeg } = window.FFmpegWASM;
-            const { toBlobURL } = window.FFmpegUtil;
 
             this.ffmpeg = new FFmpeg();
             console.log('FFmpegインスタンス作成完了');
@@ -74,68 +69,24 @@ window.ffmpegConverter = {
             console.log('FFmpegオブジェクト詳細:', this.ffmpeg);
             console.log('FFmpeg.loaded状態:', this.ffmpeg.loaded);
 
-            // CDNから動的ロード（最新の安定版を使用）
-            let coreURL = null;
-            let wasmURL = null;
-            let classWorkerURL = null;
+            // All code and WASM are served from the application's own origin.
+            const localURL = name => new URL(`lib/ffmpeg/${name}`, document.baseURI).href;
+            let timeoutId;
             try {
-                console.log('CDNからffmpeg-core読み込み開始...');
-
-                const baseURL = `${this.CDN_BASE_URL}/core@${this.FFMPEG_CORE_VERSION}/dist/esm`;
-                console.log('toBlobURL開始: ffmpeg-core.js');
-                coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
-                console.log('toBlobURL完了: ffmpeg-core.js');
-
-                console.log('toBlobURL開始: ffmpeg-core.wasm (CDNからダウンロード)');
-                wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
-                console.log('toBlobURL完了: ffmpeg-core.wasm');
-
-                // WorkerスクリプトはESM依存のため、絶対パスimportを行うブートストラップを生成
-                const workerBaseURL = `${this.CDN_BASE_URL}/ffmpeg@${this.FFMPEG_VERSION}/dist/esm`;
-                console.log('Workerブートストラップ生成開始');
-                const workerLoaderScript = `
-                    import '${workerBaseURL}/worker.js';
-                `;
-                classWorkerURL = URL.createObjectURL(
-                    new Blob([workerLoaderScript], { type: 'text/javascript' })
-                );
-                console.log('Workerブートストラップ生成完了');
-
-                console.log('ffmpeg.load()開始...');
-
-                // タイムアウト付きでload実行（CDNのため時間を延長）
-                const loadPromise = this.ffmpeg.load({ coreURL, wasmURL, classWorkerURL });
-                let timeoutId;
-                const timeoutPromise = new Promise((_, reject) => {
-                    timeoutId = setTimeout(
-                        () => reject(new Error(window.getLocalizedString('JSError.FfmpegTimeout'))),
-                        this.FFMPEG_INIT_TIMEOUT
-                    );
+                const loading = this.ffmpeg.load({
+                    coreURL: localURL('ffmpeg-core.js'),
+                    wasmURL: localURL('ffmpeg-core.wasm')
                 });
-
-                // 進捗表示
-                const progressInterval = setInterval(() => {
-                    console.log('ffmpeg.load()処理中... (CDNからWASMダウンロード・初期化中)');
-                }, this.PROGRESS_LOG_INTERVAL);
-                
-                try {
-                    await Promise.race([loadPromise, timeoutPromise]);
-                    console.log('CDNからのWASM読み込み完了');
-                } finally {
-                    clearTimeout(timeoutId);
-                    clearInterval(progressInterval);
-                }
-            } catch (loadError) {
-                console.error('CDNからの読み込みエラー:', loadError);
+                const timeout = new Promise((_, reject) => {
+                    timeoutId = setTimeout(() => reject(new Error(
+                        window.getLocalizedString('JSError.FfmpegTimeout'))), this.FFMPEG_INIT_TIMEOUT);
+                });
+                await Promise.race([loading, timeout]);
+            } catch (error) {
                 this.ffmpeg?.terminate();
-                this.ffmpeg = null;
-                throw loadError;
+                throw error;
             } finally {
-                for (const url of [coreURL, wasmURL, classWorkerURL]) {
-                    if (url) {
-                        URL.revokeObjectURL(url);
-                    }
-                }
+                clearTimeout(timeoutId);
             }
 
             this.isInitialized = true;
@@ -269,7 +220,7 @@ window.ffmpegConverter = {
     // MP4出力の共通引数（MOV変換・汎用動画変換で共用）
     buildMp4Args(options) {
         return (inputFileName, outputFileName) => {
-            const args = ['-i', inputFileName];
+            const args = [...this.SAFE_INPUT_ARGS, '-i', inputFileName];
             if (options.mode === 'fast' || options.mode === 'auto') {
                 args.push('-c', 'copy', '-movflags', '+faststart');
             } else {
@@ -307,6 +258,7 @@ window.ffmpegConverter = {
             outputExt: 'mp3',
             mimeType: 'audio/mpeg',
             buildArgs: (inputFileName, outputFileName) => [
+                ...this.SAFE_INPUT_ARGS,
                 '-i', inputFileName,
                 '-vn',
                 '-acodec', 'libmp3lame',

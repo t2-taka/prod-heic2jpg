@@ -105,6 +105,12 @@ window.heicConverter = {
             const width = image.get_width();
             const height = image.get_height();
 
+            // Validate dimensions before allocating browser-side RGBA/canvas buffers.
+            if (!Number.isSafeInteger(width) || !Number.isSafeInteger(height)
+                || width <= 0 || height <= 0 || width > 16384 || height > 16384
+                || width * height > 40000000) {
+                throw new Error(window.getLocalizedString('JSError.ImageDimensionsTooLarge'));
+            }
             console.log(`デコード成功: ${width}x${height}`);
 
             canvas = document.createElement('canvas');

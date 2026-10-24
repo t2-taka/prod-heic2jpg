@@ -1,0 +1,100 @@
+// Browser smoke test of a published build, using an isolated Edge profile.
+// PLAYWRIGHT_MODULE may point to an installed Playwright package.
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const fs = require('node:fs');
+const path = require('node:path');
+const http = require('node:http');
+const assert = require('node:assert/strict');
+const root = path.resolve(process.argv[2] || 'tmp/security-publish/wwwroot');
+assert.match(fs.readFileSync(path.join(root,'sw.js'),'utf8'), /importScripts\('\.\/service-worker-assets\.js'\)/);
+assert.equal(fs.existsSync(path.join(root,'sw.published.js')),false,'Only the generated service worker should be published');
+const fixture = fs.readFileSync(path.join(__dirname,'fixtures/rainbow.heic'));
+const csp = fs.readFileSync(path.join(root,'_headers'),'utf8').match(/Content-Security-Policy: (.+)/)[1];
+let nextRelease = false;
+const mime = {'.js':'text/javascript','.json':'application/json','.wasm':'application/wasm','.html':'text/html','.css':'text/css','.png':'image/png','.svg':'image/svg+xml','.txt':'text/plain'};
+const server = http.createServer((req,res) => {
+    const pathname = decodeURIComponent(new URL(req.url,'http://local').pathname);
+    let file = path.resolve(root,'.'+pathname);
+    if (!file.startsWith(root+path.sep) && file !== root) { res.writeHead(403);res.end();return; }
+    if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) file = path.join(root,'index.html');
+    const headers = {'Content-Type':mime[path.extname(file)] || 'application/octet-stream','Content-Security-Policy':csp,'Cross-Origin-Opener-Policy':'same-origin','Cross-Origin-Embedder-Policy':'require-corp','X-Content-Type-Options':'nosniff','Cache-Control':'no-cache'};
+    res.writeHead(200,headers);
+    let data = fs.readFileSync(file);
+    if(nextRelease && path.basename(file)==='service-worker-assets.js') data=Buffer.concat([data,Buffer.from('\nself.assetsManifest.version="security-smoke-next";\n')]);
+    res.end(data);
+});
+const wav = Buffer.alloc(44+8000*2);
+wav.write('RIFF');wav.writeUInt32LE(wav.length-8,4);wav.write('WAVEfmt ',8);wav.writeUInt32LE(16,16);wav.writeUInt16LE(1,20);wav.writeUInt16LE(1,22);wav.writeUInt32LE(8000,24);wav.writeUInt32LE(16000,28);wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(wav.length-44,40);
+for(let i=0;i<8000;i++)wav.writeInt16LE(Math.round(Math.sin(2*Math.PI*440*i/8000)*10000),44+i*2);
+(async()=>{
+    await new Promise(resolve=>server.listen(0,'127.0.0.2',resolve));
+    const origin=`http://127.0.0.2:${server.address().port}`;
+    const browser=await chromium.launch({channel:'msedge',headless:true});
+    try {
+        const context=await browser.newContext({locale:'ja-JP',acceptDownloads:true});
+        const external=[],errors=[];
+        context.on('request',r=>{ if(/^https?:/.test(r.url()) && new URL(r.url()).origin!==origin)external.push(r.url()); });
+        const page=await context.newPage();
+        page.on('pageerror',e=>errors.push(e.message));
+        page.on('console',m=>{ if(m.type()==='error')console.error('browser:',m.text().slice(0,300)); });
+        await page.goto(origin);
+        await page.locator('input[type=file]').first().waitFor({state:'attached',timeout:90000});
+        await page.locator('input[type=file]').last().setInputFiles({name:'rainbow.heic',mimeType:'image/heic',buffer:fixture});
+        await page.locator('.queue-controls .btn-primary').click();
+        await page.locator('.legal-consent-checkbox input').check();
+        await page.locator('.legal-consent-actions .btn-primary').click();
+        await page.locator('.status-completed').waitFor({timeout:60000});
+        const imageDownload=page.waitForEvent('download');
+        await page.locator('.file-actions .btn-download').click();
+        const jpg=fs.readFileSync(await (await imageDownload).path());
+        assert.equal(jpg.subarray(0,3).toString('hex'),'ffd8ff');
+        console.log('PASS: HEIC -> JPEG through the UI');
+        const media=await page.evaluate(async wave=>{
+            const c=window.ffmpegConverter;
+            if(!await c.initialize())throw Error('FFmpeg initialize failed');
+            const audio=await c.convertToMp3(Uint8Array.from(wave));
+            await c.ffmpeg.writeFile('sample.rgb',new Uint8Array(64*64*3*2).fill(128));
+            const result=await c.ffmpeg.exec(['-f','rawvideo','-pix_fmt','rgb24','-video_size','64x64','-framerate','5','-i','sample.rgb','-c:v','libx264','-pix_fmt','yuv420p','sample.mov']);
+            if(result!==0)throw Error('Video fixture generation failed: '+result);
+            const sample=await c.ffmpeg.readFile('sample.mov');
+            const fast=await c.convertMovToMp4(sample.slice(),{mode:'fast'});
+            const quality=await c.convertVideo(sample.slice(),{mode:'quality'});
+            const zip=await window.commonUtils.createZipFromFiles([{fileName:'audio.mp3',data:audio},{fileName:'video.mp4',data:quality}]);
+            const networkExit=await c.ffmpeg.exec(['-i','https://invalid.example/video.mp4','should-not-exist.mp4']);
+            await c.deleteVirtualFiles('sample.mov','sample.rgb','should-not-exist.mp4');
+            return {audio:audio.size,fast:fast.size,quality:quality.size,zip:Array.from(new Uint8Array(await zip.slice(0,2).arrayBuffer())),networkExit};
+        },[...wav]);
+        assert.ok(media.audio>100 && media.fast>100 && media.quality>100);assert.deepEqual(media.zip,[80,75]);assert.notEqual(media.networkExit,0);
+        console.log('PASS: WAV -> MP3, MOV -> MP4 (remux and re-encode), ZIP, network protocol rejection',JSON.stringify(media));
+        await page.evaluate(async()=>{await navigator.serviceWorker.ready;});
+        await page.reload();
+        await page.locator('input[type=file]').first().waitFor({state:'attached',timeout:60000});
+        assert.equal(await page.evaluate(()=>!!navigator.serviceWorker.controller),true);
+        await context.setOffline(true);
+        await page.reload();
+        await page.locator('input[type=file]').first().waitFor({state:'attached',timeout:60000});
+        const offline=await page.evaluate(async wave=>{
+            await window.heicConverter.initialize();
+            if(!await window.ffmpegConverter.initialize())throw Error('Offline FFmpeg unavailable');
+            return (await window.ffmpegConverter.convertToMp3(Uint8Array.from(wave))).size;
+        },[...wav]);
+        assert.ok(offline>100);
+        const notices=await context.newPage();
+        await notices.goto(origin+'/third-party-notices.txt');
+        assert.match(await notices.locator('body').innerText(),/Third-party notices/);
+        await notices.close();
+        console.log('PASS: offline reload, audio conversion and license text navigation');
+        await context.setOffline(false);
+        nextRelease=true;
+        await page.evaluate(async()=>{await (await navigator.serviceWorker.getRegistration()).update();});
+        await page.waitForFunction(async()=>!!(await navigator.serviceWorker.getRegistration())?.waiting,{},{timeout:90000});
+        const apply=page.locator('[role=status] button');await apply.waitFor();
+        await Promise.all([page.waitForEvent('framenavigated',{predicate:frame=>frame===page.mainFrame(),timeout:60000}),apply.click()]);
+        await page.waitForFunction(async()=> (await caches.keys()).includes('heic2jpg-security-smoke-next'),{},{timeout:60000});
+        await page.locator('input[type=file]').first().waitFor({state:'attached',timeout:60000});
+        console.log('PASS: update acceptance, activation and reload');
+        assert.deepEqual(external,[]);assert.deepEqual(errors,[]);
+        console.log('PASS: no external requests or uncaught page errors; Edge',browser.version());
+        await context.close();
+    } finally {await browser.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>server.close());

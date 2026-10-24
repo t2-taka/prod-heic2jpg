@@ -501,4 +501,8 @@ Service Worker とキャッシュによるオフライン用ファイル</value>
   <data name="LegalConsent.Agree" xml:space="preserve">
     <value>同意して変換を開始</value>
   </data>
+  <data name="Pwa.UpdateReady" xml:space="preserve"><value>更新があります。変換結果を保存してから更新してください。選択中のファイルは消去されます。</value></data>
+  <data name="Pwa.ApplyUpdate" xml:space="preserve"><value>更新して再読み込み</value></data>
+  <data name="Pwa.CloseTabs" xml:space="preserve"><value>更新するには、このアプリを開いている他のタブを閉じてください。</value></data>
+  <data name="JSError.ImageDimensionsTooLarge" xml:space="preserve"><value>画像の寸法が大きすぎます（最大4,000万画素、各辺16,384ピクセル）。</value></data>
 </root>

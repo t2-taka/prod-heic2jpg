@@ -20,7 +20,7 @@
 ### 画像変換
 | 入力フォーマット | 出力フォーマット | 特徴                           |
 | :--------------- | :--------------- | :----------------------------- |
-| `.heic`          | `.jpg`           | EXIF情報保持可能、品質調整可能 |
+| `.heic`          | `.jpg`           | 品質調整可能 |
 
 ### 動画変換
 | 入力フォーマット                                  | 出力フォーマット | 特徴                                   |
@@ -58,10 +58,10 @@
 ### 🔧 技術要件
 - **フロントエンド**: Blazor WebAssembly (.NET 10)
 - **変換エンジン**:
-  - HEIC: libheif-js v1.19.8 (✅ 導入済み)
+  - HEIC: libheif 1.23.6 + libde265 1.1.3（公式ソースからWASMビルド） (✅ 導入済み)
   - 動画: @ffmpeg/ffmpeg v0.12.15 (✅ 導入済み)
 - **セキュリティ**: COOP/COEP設定済み
-- **圧縮**: JSZip v3.10.1 (✅ 導入済み)
+- **圧縮**: JSZip v3.10.2 (✅ 導入済み)
 - **PWA**: Service Worker + Web App Manifest (✅ 導入済み)
 - **多言語**: .NET リソース（.resx）ベース
 - **プライバシー**: CSP/COOP/COEP + ネットワーク監視
@@ -125,8 +125,13 @@ HEIC2JPG/
 ## 🚀 セットアップ・実行
 
 ### 必要環境
-- .NET 10 SDK
+- .NET SDK 10.0.402以降（global.jsonで、この最低バージョン以上のインストール済み最新正式版を選択。プレビュー版は除外）
+- Visual Studioを使う場合: Visual Studio 2026（.NET 10対応）
 - 対応ブラウザ: Chrome/Edge/Brave（最新版推奨、PWA対応）
+
+SDKはVisual Studio Installerなどで更新してください。global.jsonは使用するSDKを選択する設定で、自動インストールは行いません。新しいメジャーバージョンのSDKを使う場合は、そのSDKに対応するVisual Studioも必要です。
+
+build.shでは、対象フレームワークの.NET 10に合わせて最新の.NET 10正式版SDKを取得します。
 
 ### 実行手順
 ```bash
@@ -143,7 +148,7 @@ dotnet run
 
 **HEIC変換**: ✅ 完了
 ```bash
-# libheif-js v1.19.8
+# libheif 1.23.6 + libde265 1.1.3（公式ソースからWASMビルド）
 wwwroot/lib/libheif/libheif.js
 ```
 
@@ -152,12 +157,12 @@ wwwroot/lib/libheif/libheif.js
 # @ffmpeg/ffmpeg v0.12.15
 wwwroot/lib/ffmpeg/ffmpeg.min.js
 wwwroot/lib/ffmpeg/ffmpeg-core.js
-wwwroot/lib/ffmpeg/ffmpeg-core.wasm (30.6MB)
+wwwroot/lib/ffmpeg/ffmpeg-core.wasm (修正版5.1.10のWASM)
 ```
 
 **Zip機能**: ✅ 完了
 ```bash
-# JSZip v3.10.1
+# JSZip v3.10.2
 wwwroot/lib/jszip/jszip.min.js
 ```
 
@@ -270,3 +275,36 @@ wwwroot/manifest.json
 - **一括ダウンロード**: JSZipでZIPファイルを生成
 - **エラー処理**: WASMライブラリの初期化・変換に失敗した場合は、ダミーファイルを生成せずエラーとして表示
 - **推奨環境**: WASMライブラリが正常に動作するChrome / Edge
+
+
+## セキュリティ更新（2026-10-23）
+
+- .NET / Blazor 10.0.13へ更新。SDKは.NET 10以降のインストール済み最新正式版を使用。開発サーバーは外部公開しないでください。
+- HEIC: libheif 1.23.6 / libde265 1.1.3。不要なコーデック、プラグイン読み込み、並列デコードを無効化。
+- HEIC画像は4,000万画素、各辺16,384ピクセルまで。ブラウザ用のRGBAバッファを確保する前に確認します。
+- FFmpeg: 5.1.10を再ビルド。ネットワーク機能を無効化し、入力プロトコルはfileのみ許可。H.264出力はx264、MP3出力はLAME。
+- FFmpeg本体・Workerを含め全リソースを同一オリジンから配信し、外部CDNへの依存を廃止。
+- 公開時に全アセットのハッシュ付きService Workerマニフェストを生成。更新版は整合性検証後に有効化し、利用者の操作なしで変換中のページを再読み込みしません。
+- 実体のバージョン・ソース参照・SHA-256は `wwwroot/vendor-manifest.json`。ライセンス画面はこれとcsprojから生成します。
+
+### 配信設定
+
+静的サイトとして `dotnet publish -c Release -o output` の `output/wwwroot` を配信します。
+Cloudflare Pages / Netlify等の `_headers` 対応ホストでは、同梱の `wwwroot/_headers` をそのまま配信設定に使います。
+IIS、nginx、その他のホストでは、そのファイルに記載したCSP・COOP・COEP・nosniff等をHTTPレスポンスヘッダーとして設定してください。
+COOP/COEPはHTMLのmetaタグでは設定できません。HTMLのCSPはヘッダー非対応ホスト向けの補助です。
+新しいファイル一式を一度に配信し、CDNに古いHTML・`sw.js`・`service-worker-assets.js`が残らないようにしてください。
+更新後は既存のPWAで更新通知から再読み込みします（先に変換結果を保存し、他のタブを閉じる）。
+
+### 再ビルドと検証
+
+通常の.NETビルドでは同梱済みWASMを使用します。エンジンを再ビルドする手順は `tools/wasm/README.md` を参照してください。
+
+```powershell
+dotnet publish HEIC2JPG/HEIC2JPG.csproj -c Release -o output
+dotnet list HEIC2JPG/HEIC2JPG.csproj package --vulnerable --include-transitive
+node --test tests/security.test.cjs
+```
+
+Node.jsは検証用ツールであり、公開アプリの実行には不要です。
+依存パッケージの自動監査だけでWASM内のC/C++エンジンの安全性は判定できません。エンジンの公式セキュリティ情報も確認してください。

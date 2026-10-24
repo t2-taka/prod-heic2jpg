@@ -9,6 +9,7 @@ window.localizationStrings = {};
  */
 window.updateLocalizationStrings = function(strings) {
     window.localizationStrings = strings || {};
+    window.dispatchEvent(new Event('localizationchange'));
     console.log('Localization strings updated:', Object.keys(window.localizationStrings).length, 'keys');
 };
 

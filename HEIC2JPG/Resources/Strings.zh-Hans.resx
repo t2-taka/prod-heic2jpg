@@ -501,4 +501,8 @@
   <data name="LegalConsent.Agree" xml:space="preserve">
     <value>同意并开始转换</value>
   </data>
+  <data name="Pwa.UpdateReady" xml:space="preserve"><value>有可用更新。请先保存转换结果。更新将清除所选文件。</value></data>
+  <data name="Pwa.ApplyUpdate" xml:space="preserve"><value>更新并重新加载</value></data>
+  <data name="Pwa.CloseTabs" xml:space="preserve"><value>更新前请关闭打开此应用的其他标签页。</value></data>
+  <data name="JSError.ImageDimensionsTooLarge" xml:space="preserve"><value>图像尺寸超过限制（最多4,000万像素，每边16,384像素）。</value></data>
 </root>

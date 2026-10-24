@@ -1,20 +1,23 @@
 <Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeFrameworkVersion>10.0.13</RuntimeFrameworkVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
     <InvariantGlobalization>false</InvariantGlobalization>
+    <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="9.0.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.13" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.13" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Remove="wwwroot/lib/ffmpeg/**" />
+    <ServiceWorker Include="wwwroot/sw.js" PublishedContent="wwwroot/sw.published.js" />
+    <Content Remove="wwwroot\sw.js;wwwroot\sw.published.js" />
   </ItemGroup>
 
   <!-- リソースファイルサポート（Blazor WebAssembly用） -->
@@ -33,7 +36,9 @@
     </EmbeddedResource>
   </ItemGroup>
 
-  <Target Name="GenerateLicenses" BeforeTargets="Build" Condition="'$(OS)' == 'Windows_NT'">
+  <Target Name="GenerateLicenses" BeforeTargets="PrepareForBuild" Condition="'$(OS)' == 'Windows_NT'"
+          Inputs="$(MSBuildProjectFullPath);$(MSBuildProjectDirectory)\GenerateLicenses.ps1;$(MSBuildProjectDirectory)\wwwroot\vendor-manifest.json"
+          Outputs="$(MSBuildProjectDirectory)\wwwroot\licenses.json">
     <Exec Command="powershell -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\GenerateLicenses.ps1&quot;" />
   </Target>
 

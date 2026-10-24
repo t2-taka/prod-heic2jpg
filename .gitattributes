@@ -1,0 +1,5 @@
+# Preserve the verified bytes of vendored assets on Windows and Linux.
+/HEIC2JPG/wwwroot/lib/** -text
+*.sh text eol=lf
+*.patch text eol=lf
+/HEIC2JPG/wwwroot/_headers text eol=lf

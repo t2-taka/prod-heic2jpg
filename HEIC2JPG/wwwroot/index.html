@@ -3,8 +3,7 @@
 
 <head>
     <meta charset="utf-8" />
-    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin">
-    <meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>NoTransfer Media Converter</title>
     <base href="/" />
@@ -45,8 +44,7 @@
     <script src="lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="lib/jszip/jszip.min.js"></script>
     <script src="lib/libheif/libheif.js"></script>
-    <script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/umd/ffmpeg.js"></script>
+    <script src="lib/ffmpeg/ffmpeg.min.js"></script>
     <!-- ローカライゼーションを最初に読み込み -->
     <script src="js/localization.js"></script>
     <!-- 共通ユーティリティ -->
@@ -58,22 +56,7 @@
     <script src="js/ffmpegConverter.js"></script>
     
     <!-- PWA Service Worker -->
-    <script>
-        const shouldRegisterSw = 'serviceWorker' in navigator && !window.location.hostname.includes('localhost');
-
-        if (shouldRegisterSw) {
-            window.addEventListener('load', function () {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(function (registration) {
-                        console.log('ServiceWorker登録成功: ', registration.scope);
-                    }, function (err) {
-                        console.log('ServiceWorker登録失敗: ', err);
-                    });
-            });
-        } else {
-            console.log('ServiceWorker登録をスキップしました（開発環境）');
-        }
-    </script>
+    <script src="js/pwa.js"></script>
 </body>
 
 </html>

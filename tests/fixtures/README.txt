@@ -1,0 +1,1 @@
+Fixture: rainbow-451x461.heic from strukturag/libheif, commit f81f28ac014b1c28dee483ac45b72c6b05bc421a, tests/data/. See https://github.com/strukturag/libheif/tree/f81f28ac014b1c28dee483ac45b72c6b05bc421a and its COPYING.

@@ -501,4 +501,8 @@ Offline files managed through Service Worker and cache</value>
   <data name="LegalConsent.Agree" xml:space="preserve">
     <value>Agree and start conversion</value>
   </data>
+  <data name="Pwa.UpdateReady" xml:space="preserve"><value>An update is ready. Save your results first. Updating clears selected files.</value></data>
+  <data name="Pwa.ApplyUpdate" xml:space="preserve"><value>Update and reload</value></data>
+  <data name="Pwa.CloseTabs" xml:space="preserve"><value>Close the other tabs running this app before updating.</value></data>
+  <data name="JSError.ImageDimensionsTooLarge" xml:space="preserve"><value>Image dimensions exceed the limit (40 megapixels, 16,384 pixels per side).</value></data>
 </root>
